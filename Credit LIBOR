@@ -1,0 +1,68 @@
+###################################################################################
+# "Base" 12M LIBOR forward rates
+###################################################################################
+
+T <- seq(0,6,.25)
+f3M.L <- c(rep(.01,9),rep(.02,16))
+f3M.L.1 <- 1+(f3M.L/4)
+f12M.L <- 0
+a <- 0
+for(i in 1:21) {
+  a <- f3M.L.1[i]*f3M.L.1[i+1]*f3M.L.1[i+2]*f3M.L.1[i+3]
+  f12M.L[i] <- a-1
+}
+
+# Discount factors
+DF <- 0
+a <- 1
+for(i in 1:20) {
+  DF[i] <- a*1/(1+f3M.L[i]/4)
+  a <- DF[i] 
+}
+df <- c(NA,DF)
+
+# Spot rates
+s12M.L <- 0
+for(i in 1:20) {
+ s12M.L[i] <- (1/DF[i])^(1/T[i+1])-1 
+}
+spot <- c(NA,s12M.L)
+
+M12.LIBOR <- rbind(df,spot,f12M.L)
+colnames(M12.LIBOR) <- T[1:21]
+M12.LIBOR
+
+################################################################
+# Floating leg payment
+################################################################
+
+N <- 100000000
+swap.spread <- c(56,48.5,44.75,40.625,37.325)
+float.rate <- f3M.L[1:12]+swap.spread[3]/10000
+float.pay <- float.rate/4*N
+float.schedule <- rbind(float.rate,float.pay)
+colnames(float.schedule) <- T[2:13]
+float.schedule
+
+# Floating leg PV
+float.pay.pv <- float.pay*DF[1:12]
+sum(float.pay.pv)
+
+################################################################
+# Credit adjusted 12M forward LIBOR
+################################################################
+
+pv1 <- sum((swap.spread[1]/10000+f3M.L[1:4])/4*N*DF[1:4])
+pv2 <- sum((swap.spread[2]/10000+f3M.L[1:8])/4*N*DF[1:8])
+pv3 <- sum((swap.spread[3]/10000+f3M.L[1:12])/4*N*DF[1:12])
+pv4 <- sum((swap.spread[4]/10000+f3M.L[1:16])/4*N*DF[1:16])
+pv5 <- sum((swap.spread[5]/10000+f3M.L[1:20])/4*N*DF[1:20])
+f12M.L.adj1 <- pv1/(N*DF[4])
+f12M.L.adj2 <- (pv2-N*f12M.L.adj1*DF[4])/(N*DF[8])
+f12M.L.adj3 <- (pv3-N*f12M.L.adj2*DF[8]-N*f12M.L.adj1*DF[4])/(N*DF[12])
+f12M.L.adj4 <- (pv4-N*f12M.L.adj3*DF[12]-N*f12M.L.adj2*DF[8]-N*f12M.L.adj1*DF[4])/(N*DF[16])
+f12M.L.adj5 <- (pv5-N*f12M.L.adj4*DF[16]-N*f12M.L.adj3*DF[12]-N*f12M.L.adj2*DF[8]-N*f12M.L.adj1*DF[4])/(N*DF[20])
+f12M.LIBOR.adj <- c(f12M.L.adj1,f12M.L.adj2,f12M.L.adj3,f12M.L.adj4,f12M.L.adj5)
+names(f12M.LIBOR.adj) <- c(0,1,2,3,4)
+
+f12M.LIBOR.adj
