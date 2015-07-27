@@ -1,0 +1,43 @@
+TM <- read.csv("filename", header=FALSE)
+T <- data.matrix(TM)
+
+#Take the transpose so each column maps a previous rating to a new rating
+T <- t(T)
+T
+
+#Represent a bond rated BBB at time 0
+BBB <- c(0,0,0,1,0,0,0,0)
+
+#Ratings distribution after 1 year
+T%*%BBB
+
+#Ratings distribution after 2 years
+T%*%T%*%BBB
+
+#Ratings distribution after 3 years
+T%*%T%*%T%*%BBB
+
+#Ratings distribution for BBB after many periods
+for(i in 1:100){
+  BBB <- T%*%BBB
+}
+BBB
+
+#Starting credit state AAA
+AAA <- c(1,0,0,0,0,0,0,0)
+
+#Solve for the eigenvalues and eigenvectors of the matrix T
+V <- eigen(T)$vectors
+lambda <- eigen(T)$values
+
+#AAA as a weigted sum of the eigenvectors
+weights = solve(V,AAA)
+weights
+
+#New weights vector is the old weights vector times the eigenvalues
+weights*lambda - weights2
+
+for(i in 1:1000){
+  weights <- weights*lambda
+}
+weights
