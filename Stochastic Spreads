@@ -1,0 +1,32 @@
+spread = 100  #Starting spread
+alpha = .2    #Rate of mean-reversion
+theta = 200   #Long-run average spread
+sigma = .3    #Volatility of spread
+
+N = 1000      #Number of paths
+steps = 300   #3 years if dt = 0.01
+dt = .01      #Time step
+
+#Ornstein-Uhlenbeck process
+s = matrix(0,N,steps)
+s[1:N,1] = log(spread)
+t = log(theta)
+
+for(i in 2:steps){
+  s[1:N,i]=s[1:N,i-1]+alpha*(t - s[1:N,i-1])*dt+sigma*sqrt(dt)*rnorm(N)
+}
+
+plot(exp(s[1,1:steps]), type='l', ylab="Spread: O-U Process", xlab="time")
+
+#Average spread at 3 years
+mean(exp(s[1:N,steps]))
+
+#Das-Tufino process
+for(i in 2:steps){
+  s[1:N,i]=s[1:N,i-1]+alpha*(t - s[1:N,i-1])*dt+sigma*sqrt(dt)*sqrt(s[1:N,i-1])*rnorm(N)
+}
+
+plot(exp(s[1,1:steps]), type='l', ylab="Spread: O-U Process", xlab="time")
+
+#Average spread at 3 years
+mean(exp(s[1:N,steps]))
