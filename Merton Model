@@ -1,0 +1,48 @@
+#Black-Scholes price for European Call 
+BS <- function(S0,K,r,sigma,T){
+  k <- (log(S0/K)+(r-0.5*sigma^2)*T)/(sigma*sqrt(T))
+  return (S0*pnorm(k + sigma*sqrt(T))-K*exp(-r*T)*pnorm(k))
+}
+
+MertonDefault <- function(S0,K,r,sigma,T){
+  k <- (log(S0/K)+(r-0.5*sigma^2)*T)/(sigma*sqrt(T))
+  return (pnorm(-k))
+}
+
+#In-the-money Call option
+V0 <- 110
+r <- .05
+sigma <- .3
+K <- 100
+T <- 3
+
+BS(V0,K,r,sigma,T)
+
+#Probability of default
+MertonDefault(V0,K,r,sigma,T)
+
+#Geometric Brownian Motion for Monte Carlo simulation of V
+N <- 10000    #Number of simulations
+steps <- 100  #Number of time steps
+dt = T/(steps-1)
+
+V <- matrix(0,steps,N)
+V[1,1:N] <- V0
+
+for(i in 2:steps){
+  V[i,1:N]=V[i-1,1:N]+V[i-1,1:N]*r*dt+sigma*sqrt(dt)*rnorm(N)*V[i-1,1:N]
+}
+
+#Plot of simulated path
+plot(V[1:steps,2], type="l", xlab="Time Step", ylab="V")
+
+#Plot of distribution of terminal values V_T
+hist(V[steps,1:N],100, xlab="Value of Firm", ylab="Frequency", main="Distribution of Firm Value at T")
+
+#Simulated probability of default
+sum(V[steps,1:N]<K)/N
+
+#Simulated value of the equity
+FinalVals <- V[steps,1:N] - K
+FinalVals[FinalVals[1:N]<0] <- 0
+exp(-r*T)*sum(FinalVals)/N
