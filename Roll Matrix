@@ -1,0 +1,17 @@
+RM <- read.csv("filename", header=FALSE)
+R <- data.matrix(RM)
+x0 <- c(.9, .05,.05,0,0)
+x1 <- t(R)%*%x0
+x1
+CPR <- 0
+CDR <- 0
+CPR[1]<-(1-(1-x1[4])^12)
+CDR[1]<-(1-(1-x1[5])^12)
+
+x2 <- t(R)%*%x1
+
+smm2 <- (x2[4]-x1[4])/sum(x1[1:3])
+mdr2 <- (x2[5]-x1[5])/sum(x1[1:3])
+
+CPR[2]<-(1-(1-smm2)^12)
+CDR[2]<-(1-(1-mdr2)^12)
