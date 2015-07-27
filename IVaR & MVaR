@@ -1,0 +1,60 @@
+rho <- 0.3;
+N <- 300000
+VaR_Threshold <- .99
+
+#Simulate correlated normal returns
+A <- rnorm(N)
+B <- (rho*A + (sqrt(1-rho^2))*rnorm(N))
+
+A <- 100*A
+B <- 100*B
+
+cor(A,B)
+
+#VaR of A and B
+A2 <- A[order(A)]
+B2 <- B[order(B)]
+
+VaR_A <- -A2[(1-VaR_Threshold)*N]
+VaR_B <- -B2[(1-VaR_Threshold)*N]
+VaR_A
+VaR_B
+
+#Portfolio returns
+port_returns <- A+B
+port_returns <- port_returns[order(port_returns)]
+VaR <- -port_returns[(1-VaR_Threshold)*N]
+VaR
+
+#Incremental VaR of A and B
+IVaR_A = VaR - VaR_B
+IVaR_B = VaR - VaR_A
+IVaR_A
+IVaR_B
+
+IVaR_A + IVaR_B
+VaR
+
+#Marginal VaR of A and B
+A <- 101/100*A
+
+#Portfolio returns
+port_returns_MA <- A+B
+port_returns_MA <- port_returns_MA[order(port_returns_MA)]
+
+MVaR_A <- (-port_returns_MA[(1-VaR_Threshold)*N] - VaR)*100
+MVaR_A
+
+#A back to "normal"
+A <- 100/101*A
+B <- 101/100*B
+
+#Portfolio returns
+port_returns_MB <- A+B
+port_returns_MB <- port_returns_MB[order(port_returns_MB)]
+
+MVaR_B <- (-port_returns_MB[(1-VaR_Threshold)*N] - VaR)*100
+MVaR_B
+
+MVaR_A + MVaR_B
+VaR
