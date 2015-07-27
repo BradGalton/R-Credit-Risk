@@ -1,0 +1,18 @@
+MRR <- read.csv("fielname", header=FALSE)
+
+#Starting portfolio state.  Nothing is PIF or Liquidated
+x0 = c(.9,.03,.02,.01,.01,.01,.01,.01,.00,.00)
+sum(x0)
+
+#Matrix to store 10 years of portfolio state information
+port <- matrix(0,10,120)
+port[1:10,1] <-x0
+
+MMR <- 0
+
+#Roll the portfolio forward in time 120 periods
+for(i in 2:120){
+  port[1:10,i] <- t(MRR)%*%port[1:10,(i-1)]
+  MMR[i] <- (port[8,i]-MRR[8,8]*port[8,i-1])/sum(port[1:5,i-1])                                      
+}
+plot(MMR[2:120]*100, xlab="Month", ylab="MMR (%)")
