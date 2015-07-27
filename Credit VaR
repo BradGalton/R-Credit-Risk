@@ -1,0 +1,61 @@
+#Portfolio of loans
+rho <- .03  
+pd <- .05  
+N <- 3000 
+LGD <- .5 
+
+m = 1000
+
+#Correlation matrix
+cor_matrix <- matrix(rho,N,N)
+diag(cor_matrix) <- 1
+
+#Cholesky factorization
+R <- chol(cor_matrix)
+
+#Generate m samples of N correlated loans
+samples <- matrix(rnorm(m*N),N,m)
+cor_samples <- t(R)%*%samples
+cor_samples <- t(cor_samples)
+
+#Cutoff level at which a loan defaults
+cutoff <- qnorm(pd)
+
+#Indicate whether each loan defaulted
+cor_samples <- cor_samples - cutoff
+cor_samples[cor_samples > 0] <- 0
+cor_samples[cor_samples < 0] <- 1
+
+#Average default rate is approximately PD
+results <- rowSums(cor_samples)
+mean(results/N)
+
+credit_losses <- results*LGD
+
+#Sort credit losses and express as fraction of portfolio value
+ord <- order(credit_losses)
+credit_losses <- credit_losses[ord]/N
+
+plot((1:m)/m,credit_losses, xlab="Percentile", main="Credit VaR")
+plot(((m-(m/20)):m)/m, credit_losses[(m-(m/20)):m], xlab="Percentile", ylab="Credit Losses",main="Credit VaR", type="l")
+
+#Stochastic LGD with Beta-distributed losses
+mn <- LGD
+v <- .04
+
+#Shape parameters
+b <- (mn*(mn-1)^2)/v + mn - 1
+a <- -(b*mn)/(mn-1)
+
+#Simulate m scenario LGDs
+simulated_losses <- rbeta(m,a,b,ncp = 0)
+
+credit_losses2 <- rowSums(cor_samples)*matrix(simulated_losses,m,1)
+ord2 <- order(credit_losses2)
+credit_losses2 <- credit_losses2[ord2]/N
+
+
+plot((1:m)/m,credit_losses2, xlab="Percentile", main="Credit VaR - Stochastic LGD")
+plot((1:m)/m,credit_losses2-credit_losses, xlab="Percentile", main="Credit VaR - Stochastic LGD")
+plot(((m-(m/20)):m)/m, credit_losses2[(m-(m/20)):m], xlab="Percentile", ylab="Credit Losses",main="Credit VaR - Stochastic vs. Constant LGD", col=2,type="l", ylim=c(0.03,.12))
+lines(((m-(m/20)):m)/m, credit_losses[(m-(m/20)):m], col=3)                 
