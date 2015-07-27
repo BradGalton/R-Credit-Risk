@@ -1,0 +1,131 @@
+################################################################
+# Bootstrapping implied hazard rates for CDS
+################################################################
+
+t <- seq(0.5,4,0.5)
+T <- seq(1,4,1)
+spot <- .02
+DF <- 1/(1+spot/2)^(2*t)
+DF <- c(DF[2],DF[4],DF[6],DF[8])
+S <- c(100,150,200,250)
+R <- 0.5
+N <- 1000000
+
+CDS.obj <- function(P0,P1,S,R,N,DF) {
+    Fee <- S/10000*N*DF*P1
+    Accr <- S/10000*N*DF*0.5*(P0-P1)
+    Cont <- (1-R)*N*DF*(P0-P1)
+    f <- abs(Fee+Fee.old+Accr+Accr.old-Cont-Cont.old)
+    return(f)
+} 
+
+CDS.mat <- matrix(0,nrow=5,ncol=length(T))
+colnames(CDS.mat) <- T
+rownames(CDS.mat) <- c("S","DF","Ps","Pd","H")
+CDS.mat[1,] <- S
+CDS.mat[2,] <- DF
+Fee.old <- 0
+Accr.old <- 0
+Cont.old <- 0
+CDS.mat[3,1] <- optimize(function(P1) CDS.obj(1,P1,S[1],R,N,DF[1]),interval=c(0,1))$minimum
+CDS.mat[4,1] <- (1-CDS.mat[3,1])
+CDS.mat[5,1] <- 1-(CDS.mat[3,1]/1)
+Fee.old <- S[2]/10000*N*DF[1]*CDS.mat[3,1]
+Accr.old <- S[2]/10000*N*DF[1]*0.5*(1-CDS.mat[3,1])
+Cont.old <- (1-R)*N*DF[1]*(1-CDS.mat[3,1])
+CDS.mat[3,2] <- optimize(function(P1) CDS.obj(CDS.mat[3,1],P1,S[2],R,N,DF[2]),interval=c(0,1))$minimum
+CDS.mat[4,2] <- CDS.mat[3,1]-CDS.mat[3,2]
+CDS.mat[5,2] <- 1-(CDS.mat[3,2]/CDS.mat[3,1])
+Fee.old <- S[3]/10000*N*DF[1]*CDS.mat[3,1]+S[3]/10000*N*DF[2]*CDS.mat[3,2]
+Accr.old <- S[3]/10000*N*DF[1]*0.5*(1-CDS.mat[3,1])+S[3]/10000*N*DF[2]*0.5*(CDS.mat[3,1]-CDS.mat[3,2])
+Cont.old <- (1-R)*N*DF[1]*(1-CDS.mat[3,1])+(1-R)*N*DF[2]*(CDS.mat[3,1]-CDS.mat[3,2])
+CDS.mat[3,3] <- optimize(function(P1) CDS.obj(CDS.mat[3,2],P1,S[3],R,N,DF[3]),interval=c(0,1))$minimum
+CDS.mat[4,3] <- CDS.mat[3,2]-CDS.mat[3,3]
+CDS.mat[5,3] <- 1-(CDS.mat[3,3]/CDS.mat[3,2])
+Fee.old <- S[4]/10000*N*DF[1]*CDS.mat[3,1]+S[4]/10000*N*DF[2]*CDS.mat[3,2]+S[4]/10000*N*DF[3]*CDS.mat[3,3]
+Accr.old <- S[4]/10000*N*DF[1]*0.5*(1-CDS.mat[3,1])+S[4]/10000*N*DF[2]*0.5*(CDS.mat[3,1]-CDS.mat[3,2])+S[4]/10000*N*DF[3]*0.5*(CDS.mat[3,2]-CDS.mat[3,3])
+Cont.old <- (1-R)*N*DF[1]*(1-CDS.mat[3,1])+(1-R)*N*DF[2]*(CDS.mat[3,1]-CDS.mat[3,2])+(1-R)*N*DF[3]*(CDS.mat[3,2]-CDS.mat[3,3])
+CDS.mat[3,4] <- optimize(function(P1) CDS.obj(CDS.mat[3,3],P1,S[4],R,N,DF[4]),interval=c(0,1))$minimum
+CDS.mat[4,4] <- CDS.mat[3,3]-CDS.mat[3,4]
+CDS.mat[5,4] <- 1-(CDS.mat[3,4]/CDS.mat[3,3])
+
+################################################################
+# Par CDS rate with constant hazard rates
+################################################################
+
+lambda <- 0.03
+
+CDS.mat <- matrix(0,nrow=5,ncol=length(T))
+colnames(CDS.mat) <- T
+rownames(CDS.mat) <- c("S","DF","Ps","Pd","H")
+CDS.mat[2,] <- DF
+CDS.mat[3,1] <- (1-lambda)
+CDS.mat[4,1] <- (1-CDS.mat[3,1])
+CDS.mat[5,1] <- 1-(CDS.mat[3,1]/1)
+CDS.mat[3,2] <- (1-lambda)^2
+CDS.mat[4,2] <- (CDS.mat[3,1]-CDS.mat[3,2])
+CDS.mat[5,2] <- 1-(CDS.mat[3,2]/CDS.mat[3,1])
+CDS.mat[3,3] <- (1-lambda)^3
+CDS.mat[4,3] <- (CDS.mat[3,2]-CDS.mat[3,3])
+CDS.mat[5,3] <- 1-(CDS.mat[3,3]/CDS.mat[3,2])
+CDS.mat[3,4] <- (1-lambda)^4
+CDS.mat[4,4] <- (CDS.mat[3,3]-CDS.mat[3,4])
+CDS.mat[5,4] <- 1-(CDS.mat[3,4]/CDS.mat[3,3])
+Fee.old <- 0
+Accr.old <- 0
+Cont.old <- 0
+CDS.mat[1,1] <- optimize(function(S) CDS.obj(1,CDS.mat[3,1],S,R,N,DF[1]),interval=c(0,1000))$minimum
+CDS.mat[1,2] <- optimize(function(S) CDS.obj(CDS.mat[3,1],CDS.mat[3,2],S,R,N,DF[2]),interval=c(0,1000))$minimum
+CDS.mat[1,3] <- optimize(function(S) CDS.obj(CDS.mat[3,2],CDS.mat[3,3],S,R,N,DF[3]),interval=c(0,1000))$minimum
+CDS.mat[1,4] <- optimize(function(S) CDS.obj(CDS.mat[3,3],CDS.mat[3,4],S,R,N,DF[4]),interval=c(0,1000))$minimum
+
+################################################################
+# Risky annuity MTM
+################################################################
+
+S0 <- 1
+S1 <- 200
+S2 <- 500
+N <- 1000000
+
+RA.fee <- S0/10000*DF[1]*CDS.mat[3,1]+S0/10000*DF[2]*CDS.mat[3,2]+S0/10000*DF[3]*CDS.mat[3,3]
+RA.accr <- S0/10000*DF[1]*0.5*(1-CDS.mat[3,1])+S0/10000*DF[2]*0.5*(CDS.mat[3,1]-CDS.mat[3,2])+S0/10000*DF[3]*0.5*(CDS.mat[3,2]-CDS.mat[3,3])
+RA <- RA.fee+RA.accr
+
+MTM <- (S1-S2)*RA*N
+
+# Survival probabilities with curve shift
+S <- c(101,151,201,251)
+
+CDS.mat <- matrix(0,nrow=5,ncol=length(T))
+colnames(CDS.mat) <- T
+rownames(CDS.mat) <- c("S","DF","Ps","Pd","H")
+CDS.mat[1,] <- S
+CDS.mat[2,] <- DF
+Fee.old <- 0
+Accr.old <- 0
+Cont.old <- 0
+CDS.mat[3,1] <- optimize(function(P1) CDS.obj(1,P1,S[1],R,N,DF[1]),interval=c(0,1))$minimum
+CDS.mat[4,1] <- (1-CDS.mat[3,1])
+CDS.mat[5,1] <- 1-(CDS.mat[3,1]/1)
+Fee.old <- S[2]/10000*N*DF[1]*CDS.mat[3,1]
+Accr.old <- S[2]/10000*N*DF[1]*0.5*(1-CDS.mat[3,1])
+Cont.old <- (1-R)*N*DF[1]*(1-CDS.mat[3,1])
+CDS.mat[3,2] <- optimize(function(P1) CDS.obj(CDS.mat[3,1],P1,S[2],R,N,DF[2]),interval=c(0,1))$minimum
+CDS.mat[4,2] <- CDS.mat[3,1]-CDS.mat[3,2]
+CDS.mat[5,2] <- 1-(CDS.mat[3,2]/CDS.mat[3,1])
+Fee.old <- S[3]/10000*N*DF[1]*CDS.mat[3,1]+S[3]/10000*N*DF[2]*CDS.mat[3,2]
+Accr.old <- S[3]/10000*N*DF[1]*0.5*(1-CDS.mat[3,1])+S[3]/10000*N*DF[2]*0.5*(CDS.mat[3,1]-CDS.mat[3,2])
+Cont.old <- (1-R)*N*DF[1]*(1-CDS.mat[3,1])+(1-R)*N*DF[2]*(CDS.mat[3,1]-CDS.mat[3,2])
+CDS.mat[3,3] <- optimize(function(P1) CDS.obj(CDS.mat[3,2],P1,S[3],R,N,DF[3]),interval=c(0,1))$minimum
+CDS.mat[4,3] <- CDS.mat[3,2]-CDS.mat[3,3]
+CDS.mat[5,3] <- 1-(CDS.mat[3,3]/CDS.mat[3,2])
+
+RA.fee <- S0/10000*DF[1]*CDS.mat[3,1]+S0/10000*DF[2]*CDS.mat[3,2]+S0/10000*DF[3]*CDS.mat[3,3]
+RA.accr <- S0/10000*DF[1]*0.5*(1-CDS.mat[3,1])+S0/10000*DF[2]*0.5*(CDS.mat[3,1]-CDS.mat[3,2])+S0/10000*DF[3]*0.5*(CDS.mat[3,2]-CDS.mat[3,3])
+RA.new <- RA.fee+RA.accr
+DV01.par <- -RA.new*N
+ 
+MTM.200base <- MTM
+MTM.200new <- (S1-(S2+1))*RA.new*N
+DV01.change <- (MTM.200new-MTM.200base)
